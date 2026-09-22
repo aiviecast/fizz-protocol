@@ -213,7 +213,7 @@ type RecallResult = {
 
 // ── JSON ヘルパ (local) ──────────────────────────────────────────────
 
-local fn jget(v: Value, key: String) -> Value = value.get(v, key) ?? value.null()
+local fn jget(v: Value, key: String) -> Value = value.field(v, key) ?? value.null()
 
 local fn jstr(v: Value, key: String) -> Option[String] =
   result.to_option(value.as_string(jget(v, key)))
@@ -426,11 +426,11 @@ fn recall_decode(v: Value) -> Result[RecallResult, String] =
     ok(u)  => {
       let recent = list.filter_map(jarr(v, "recent"), (item) => result.to_option(event_decode(item)))
       let sessions = list.filter_map(jarr(v, "recentSessions"), (item) => result.to_option(participation_decode(item)))
-      let past = match value.get(v, "pastSessions") {
+      let past = match value.field(v, "pastSessions") {
         ok(p)  => result.to_option(past_sessions_decode(p)),
         err(_) => none,
       }
-      let engagement = match value.get(v, "engagement") {
+      let engagement = match value.field(v, "engagement") {
         ok(e)  => result.to_option(engagement_decode(e)),
         err(_) => none,
       }
