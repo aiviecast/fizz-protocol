@@ -4,17 +4,17 @@
 
 すべての Fizz 部品 (source / brain / voice / avatar / hub / overlay) は
 このパッケージの型にだけ依存して通信する。部品同士は直接依存しない。
-[openaituber](https://github.com/Aid-On/openaituber) の
+[openaituber](https://github.com/aiviecast/openaituber) の
 `docs/almide-component-breakdown.md` §1 で定義した契約のうち、
 **ランタイムのワイヤ側**を担う (persona のオンディスク形式は
-[fizz-persona](https://github.com/Aid-On/fizz-persona))。
+[fizz-persona](https://github.com/aiviecast/fizz-persona))。
 
 ## Install
 
 ```toml
 # almide.toml
 [dependencies]
-fizz_protocol = { git = "https://github.com/Aid-On/fizz-protocol", tag = "v0.2.0" }
+fizz_protocol = { git = "https://github.com/aiviecast/fizz-protocol", tag = "v0.2.0" }
 ```
 
 ## Modules
