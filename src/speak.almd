@@ -42,31 +42,31 @@ type SpeakItem = {
 
 fn fragment_encode(f: SentenceFragment) -> Value = {
   let base = [
-    ("emotion", value.str(emotion.emotion_to_tag(f.emotion))),
-    ("message", value.str(f.message)),
+    ("emotion", value.string(emotion.emotion_to_tag(f.emotion))),
+    ("message", value.string(f.message)),
   ]
   let with_hair = match f.hair {
-    some(h) => base + [("hair", value.str(h))],
+    some(h) => base + [("hair", value.string(h))],
     none    => base,
   }
   let with_fx = match f.fx {
-    some(x) => with_hair + [("fx", value.str(x))],
+    some(x) => with_hair + [("fx", value.string(x))],
     none    => with_hair,
   }
   value.object(with_fx)
 }
 
 fn fragment_decode(v: Value) -> Result[SentenceFragment, String] = {
-  let message = result.unwrap_or(value.as_string(value.field(v, "message") ?? value.null()), "")
+  let message = result.unwrap_or(value.as_string(value.get(v, "message") ?? value.null()), "")
   guard message != "" else err("fragment: missing message")
-  let tag = result.unwrap_or(value.as_string(value.field(v, "emotion") ?? value.null()), "neutral")
+  let tag = result.unwrap_or(value.as_string(value.get(v, "emotion") ?? value.null()), "neutral")
   // 未知の感情タグは契約どおり Neutral に倒す (エラーにしない)。
   let emo = emotion.emotion_from_tag(tag) ?? emotion.Neutral
   ok(SentenceFragment {
     emotion: emo,
     message: message,
-    hair: result.to_option(value.as_string(value.field(v, "hair") ?? value.null())),
-    fx: result.to_option(value.as_string(value.field(v, "fx") ?? value.null())),
+    hair: result.to_option(value.as_string(value.get(v, "hair") ?? value.null())),
+    fx: result.to_option(value.as_string(value.get(v, "fx") ?? value.null())),
   })
 }
 

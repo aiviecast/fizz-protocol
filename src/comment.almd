@@ -59,26 +59,26 @@ fn source_from_string(s: String) -> Result[CommentSource, String] = match s {
 
 fn comment_encode(c: Comment) -> Value = {
   let base = [
-    ("id", value.str(c.id)),
-    ("user", value.str(c.user)),
-    ("text", value.str(c.text)),
+    ("id", value.string(c.id)),
+    ("user", value.string(c.user)),
+    ("text", value.string(c.text)),
   ]
   let with_color = match c.color {
-    some(col) => base + [("color", value.str(col))],
+    some(col) => base + [("color", value.string(col))],
     none      => base,
   }
-  value.object(with_color + [("source", value.str(source_to_string(c.source)))])
+  value.object(with_color + [("source", value.string(source_to_string(c.source)))])
 }
 
 fn comment_decode(v: Value) -> Result[Comment, String] = {
-  let id = result.unwrap_or(value.as_string(value.field(v, "id") ?? value.null()), "")
+  let id = result.unwrap_or(value.as_string(value.get(v, "id") ?? value.null()), "")
   guard id != "" else err("comment: missing id")
-  let user = result.unwrap_or(value.as_string(value.field(v, "user") ?? value.null()), "")
+  let user = result.unwrap_or(value.as_string(value.get(v, "user") ?? value.null()), "")
   guard user != "" else err("comment: missing user")
-  let text = result.unwrap_or(value.as_string(value.field(v, "text") ?? value.null()), "")
+  let text = result.unwrap_or(value.as_string(value.get(v, "text") ?? value.null()), "")
   guard text != "" else err("comment: missing text")
-  let color = result.to_option(value.as_string(value.field(v, "color") ?? value.null()))
-  let src_str = result.unwrap_or(value.as_string(value.field(v, "source") ?? value.null()), "")
+  let color = result.to_option(value.as_string(value.get(v, "color") ?? value.null()))
+  let src_str = result.unwrap_or(value.as_string(value.get(v, "source") ?? value.null()), "")
   match source_from_string(src_str) {
     err(e)  => err(e),
     ok(src) => ok(Comment { id: id, user: user, text: text, color: color, source: src }),
