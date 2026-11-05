@@ -213,7 +213,7 @@ type RecallResult = {
 
 // ── JSON ヘルパ (local) ──────────────────────────────────────────────
 
-local fn jget(v: Value, key: String) -> Value = value.field(v, key) ?? value.null()
+local fn jget(v: Value, key: String) -> Value = value.get(v, key) ?? value.null()
 
 local fn jstr(v: Value, key: String) -> Option[String] =
   result.to_option(value.as_string(jget(v, key)))
@@ -229,7 +229,7 @@ local fn jnum(v: Value, key: String) -> Option[Float] = {
   match result.to_option(value.as_float(raw)) {
     some(f) => some(f),
     none    => match result.to_option(value.as_int(raw)) {
-      some(n) => some(int.to_float(n)),
+      some(n) => some(float.from(n)),
       none    => none,
     },
   }
@@ -239,7 +239,7 @@ local fn jarr(v: Value, key: String) -> List[Value] =
   result.unwrap_or(value.as_array(jget(v, key)), [])
 
 local fn opt_str(key: String, v: Option[String]) -> List[(String, Value)] =
-  match v { some(s) => [(key, value.str(s))], none => [] }
+  match v { some(s) => [(key, value.string(s))], none => [] }
 
 local fn opt_int(key: String, v: Option[Int]) -> List[(String, Value)] =
   match v { some(n) => [(key, value.int(n))], none => [] }
@@ -254,10 +254,10 @@ fn event_encode(e: MemoryEvent) -> Value =
     [("id", value.int(e.id)), ("user_id", value.int(e.user_id))]
       + opt_int("session_id", e.session_id)
       + [
-          ("role", value.str(role_to_string(e.role))),
-          ("content", value.str(e.content)),
+          ("role", value.string(role_to_string(e.role))),
+          ("content", value.string(e.content)),
           ("ts", value.int(e.ts)),
-          ("tags", value.array(list.map(e.tags, (t) => value.str(t)))),
+          ("tags", value.array(list.map(e.tags, (t) => value.string(t)))),
         ])
 
 fn event_decode(v: Value) -> Result[MemoryEvent, String] =
@@ -278,7 +278,7 @@ fn user_encode(u: MemoryUser) -> Value =
   value.object(
     [
       ("id", value.int(u.id)),
-      ("name", value.str(u.name)),
+      ("name", value.string(u.name)),
       ("first_seen", value.int(u.first_seen)),
       ("last_seen", value.int(u.last_seen)),
       ("message_count", value.int(u.message_count)),
@@ -301,7 +301,7 @@ fn session_encode(s: MemorySession) -> Value =
   value.object(
     [("id", value.int(s.id)), ("started_at", value.int(s.started_at))]
       + opt_int("ended_at", s.ended_at)
-      + [("persona", value.str(s.persona))]
+      + [("persona", value.string(s.persona))]
       + opt_str("summary", s.summary)
       + opt_str("title", s.title))
 
@@ -347,12 +347,12 @@ fn engagement_encode(e: SessionEngagement) -> Value =
       + [("avgLen", value.float(e.avg_len)), ("maxLen", value.int(e.max_len))]
       + opt_int("intervalMedianMs", e.interval_median_ms)
       + [
-          ("burstiness", value.str(burstiness_to_string(e.burstiness))),
-          ("recentTempo", value.str(tempo_to_string(e.recent_tempo))),
+          ("burstiness", value.string(burstiness_to_string(e.burstiness))),
+          ("recentTempo", value.string(tempo_to_string(e.recent_tempo))),
         ]
       + opt_float("reactionRate", e.reaction_rate)
       + opt_float("questionRate", e.question_rate)
-      + (match e.tone { some(t) => [("tone", value.str(tone_to_string(t)))], none => [] }))
+      + (match e.tone { some(t) => [("tone", value.string(tone_to_string(t)))], none => [] }))
 
 fn engagement_decode(v: Value) -> Result[SessionEngagement, String] = {
   let burst = burstiness_from_string(jstr(v, "burstiness") ?? "none")
@@ -389,7 +389,7 @@ fn past_sessions_encode(p: PastSessionsSummary) -> Value =
     ]
       + opt_int("lastSessionGapMs", p.last_session_gap_ms)
       + opt_int("lastSessionMsgCount", p.last_session_msg_count)
-      + [("attendanceFlavor", value.str(attendance_to_string(p.attendance_flavor)))]
+      + [("attendanceFlavor", value.string(attendance_to_string(p.attendance_flavor)))]
       + opt_str("lastSessionSummary", p.last_session_summary))
 
 fn past_sessions_decode(v: Value) -> Result[PastSessionsSummary, String] =
@@ -426,13 +426,13 @@ fn recall_decode(v: Value) -> Result[RecallResult, String] =
     ok(u)  => {
       let recent = list.filter_map(jarr(v, "recent"), (item) => result.to_option(event_decode(item)))
       let sessions = list.filter_map(jarr(v, "recentSessions"), (item) => result.to_option(participation_decode(item)))
-      let past = match value.field(v, "pastSessions") {
-        ok(p)  => result.to_option(past_sessions_decode(p)),
-        err(_) => none,
+      let past = match value.get(v, "pastSessions") {
+        some(p)  => result.to_option(past_sessions_decode(p)),
+        none => none,
       }
-      let engagement = match value.field(v, "engagement") {
-        ok(e)  => result.to_option(engagement_decode(e)),
-        err(_) => none,
+      let engagement = match value.get(v, "engagement") {
+        some(e)  => result.to_option(engagement_decode(e)),
+        none => none,
       }
       ok(RecallResult {
         user: u,

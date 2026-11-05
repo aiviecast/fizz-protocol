@@ -141,7 +141,7 @@ fn parse_tag_body(body: String) -> Option[Tag] = {
     }
   else {
     let kind = string.to_lower(string.trim(list.first(parts) ?? ""))
-    let rest = string.trim(string.join(list.drop(parts, 1), ":"))
+    let rest = string.trim(list.join(list.drop(parts, 1), ":"))
     match kind {
       "fx"      => some(FxTag(rest)),
       "hair"    => some(HairTag(rest)),

@@ -184,10 +184,10 @@ type CommandResponse =
 // ── encode ヘルパ ────────────────────────────────────────────────────
 
 local fn obj(domain: String, kind: String, fields: List[(String, Value)]) -> Value =
-  value.object([("domain", value.str(domain)), ("type", value.str(kind))] + fields)
+  value.object([("domain", value.string(domain)), ("type", value.string(kind))] + fields)
 
 local fn opt_str(key: String, v: Option[String]) -> List[(String, Value)] =
-  match v { some(s) => [(key, value.str(s))], none => [] }
+  match v { some(s) => [(key, value.string(s))], none => [] }
 
 local fn opt_int(key: String, v: Option[Int]) -> List[(String, Value)] =
   match v { some(n) => [(key, value.int(n))], none => [] }
@@ -207,11 +207,11 @@ local fn float_map_to_value(m: Map[String, Float]) -> Value = {
 }
 
 local fn string_list_to_value(xs: List[String]) -> Value =
-  value.array(list.map(xs, (s) => value.str(s)))
+  value.array(list.map(xs, (s) => value.string(s)))
 
 // ── decode ヘルパ ────────────────────────────────────────────────────
 
-local fn jget(v: Value, key: String) -> Value = value.field(v, key) ?? value.null()
+local fn jget(v: Value, key: String) -> Value = value.get(v, key) ?? value.null()
 
 local fn jstr(v: Value, key: String) -> Option[String] =
   result.to_option(value.as_string(jget(v, key)))
@@ -228,7 +228,7 @@ local fn jnum(v: Value, key: String) -> Option[Float] = {
   match result.to_option(value.as_float(raw)) {
     some(f) => some(f),
     none    => match result.to_option(value.as_int(raw)) {
-      some(n) => some(int.to_float(n)),
+      some(n) => some(float.from(n)),
       none    => none,
     },
   }
@@ -241,7 +241,7 @@ local fn jstr_list(v: Value, key: String) -> List[String] =
 
 local fn jfloat_map(v: Value, key: String) -> Map[String, Float] = {
   let o = jget(v, key)
-  let ks: List[String] = value.keys(o)
+  let ks: List[String] = list.map(value.as_object(o) ?? [], (kv) => kv.0)
   var m: Map[String, Float] = [:]
   for k in ks {
     match jnum(o, k) {
@@ -264,7 +264,7 @@ fn command_encode(c: Command) -> Value = match c {
 
 local fn avatar_encode(a: AvatarCommand) -> Value = match a {
   SetExpression { name, weight } =>
-    obj("avatar", "setExpression", [("name", value.str(name)), ("weight", value.float(weight))]),
+    obj("avatar", "setExpression", [("name", value.string(name)), ("weight", value.float(weight))]),
   SetExpressions { values } =>
     obj("avatar", "setExpressions", [("values", float_map_to_value(values))]),
   LookAt { yaw, pitch } =>
@@ -272,25 +272,25 @@ local fn avatar_encode(a: AvatarCommand) -> Value = match a {
   SetHeadRotation { x, y, z } =>
     obj("avatar", "setHeadRotation", [("x", value.float(x)), ("y", value.float(y)), ("z", value.float(z))]),
   SetBoneRotation { bone, x, y, z } =>
-    obj("avatar", "setBoneRotation", [("bone", value.str(bone)), ("x", value.float(x)), ("y", value.float(y)), ("z", value.float(z))]),
+    obj("avatar", "setBoneRotation", [("bone", value.string(bone)), ("x", value.float(x)), ("y", value.float(y)), ("z", value.float(z))]),
   PlayMotion { clip, looping } =>
-    obj("avatar", "playMotion", [("clip", value.str(clip)), ("loop", value.bool(looping))]),
+    obj("avatar", "playMotion", [("clip", value.string(clip)), ("loop", value.bool(looping))]),
   PlayProc { name } =>
-    obj("avatar", "playProc", [("name", value.str(name))]),
+    obj("avatar", "playProc", [("name", value.string(name))]),
   PlayFbx { url, looping, fade_ms } =>
-    obj("avatar", "playFbx", [("url", value.str(url)), ("loop", value.bool(looping))] + opt_int("fadeMs", fade_ms)),
+    obj("avatar", "playFbx", [("url", value.string(url)), ("loop", value.bool(looping))] + opt_int("fadeMs", fade_ms)),
   StopMotion { fade_ms } =>
     obj("avatar", "stopMotion", opt_int("fadeMs", fade_ms)),
   SetIdle { blink, breath, sway } =>
     obj("avatar", "setIdle", opt_bool("blink", blink) + opt_bool("breath", breath) + opt_bool("sway", sway)),
   SetEmotion { name, weight } =>
-    obj("avatar", "setEmotion", [("name", value.str(emotion.emotion_to_tag(name)))] + opt_float("weight", weight)),
+    obj("avatar", "setEmotion", [("name", value.string(emotion.emotion_to_tag(name)))] + opt_float("weight", weight)),
   ResetAvatar =>
     obj("avatar", "reset", []),
 }
 
 local fn speech_encode(s: SpeechCommand) -> Value = match s {
-  Speak { url }      => obj("speech", "speak", [("url", value.str(url))]),
+  Speak { url }      => obj("speech", "speak", [("url", value.string(url))]),
   StopSpeak          => obj("speech", "stopSpeak", []),
   SetMic { enabled } => obj("speech", "setMic", [("enabled", value.bool(enabled))]),
   MouthOpen { value: mouth } => obj("speech", "mouthOpen", [("value", value.float(mouth))]),
@@ -299,7 +299,7 @@ local fn speech_encode(s: SpeechCommand) -> Value = match s {
 local fn scene_encode(s: SceneCommand) -> Value = match s {
   SetBackground { mode, color, image_url } =>
     obj("scene", "setBackground",
-      [("mode", value.str(background_mode_to_string(mode)))]
+      [("mode", value.string(background_mode_to_string(mode)))]
         + opt_str("color", color) + opt_str("imageUrl", image_url)),
   SetLighting { ambient_intensity, directional_intensity, ambient_color, directional_color } =>
     obj("scene", "setLighting",
@@ -311,22 +311,22 @@ local fn scene_encode(s: SceneCommand) -> Value = match s {
     obj("scene", "setGrid", [("visible", value.bool(visible))]),
   SetCamera { preset, duration_ms } =>
     obj("scene", "setCamera",
-      [("preset", value.str(camera_preset_to_string(preset)))] + opt_int("durationMs", duration_ms)),
+      [("preset", value.string(camera_preset_to_string(preset)))] + opt_int("durationMs", duration_ms)),
 }
 
 local fn overlay_encode(o: OverlayCommand) -> Value = match o {
   PushComment(c) =>
     obj("overlay", "comment", [("comment", comment.comment_encode(c))]),
   SetReadingComment { id, user, text } =>
-    obj("overlay", "setReadingComment", opt_str("id", id) + opt_str("user", user) + [("text", value.str(text))]),
+    obj("overlay", "setReadingComment", opt_str("id", id) + opt_str("user", user) + [("text", value.string(text))]),
   SetReply { text } =>
-    obj("overlay", "setReply", [("text", value.str(text))]),
+    obj("overlay", "setReply", [("text", value.string(text))]),
   SetFallback { url } =>
     obj("overlay", "setFallback", opt_str("url", url)),
   SetOpening { url, duration_ms } =>
     obj("overlay", "setOpening", opt_str("url", url) + opt_int("durationMs", duration_ms)),
   SetLayout { mode } =>
-    obj("overlay", "setLayout", [("mode", value.str(layout_mode_to_string(mode)))]),
+    obj("overlay", "setLayout", [("mode", value.string(layout_mode_to_string(mode)))]),
   ClearBroadcast =>
     obj("overlay", "clearBroadcast", []),
 }
@@ -335,7 +335,7 @@ local fn sync_encode(s: SyncCommand) -> Value = match s {
   Ping { id } => obj("sync", "ping", opt_str("id", id)),
   SettingChanged { scope, key, value_json, deleted } =>
     obj("sync", "setting",
-      [("scope", value.str(scope)), ("key", value.str(key))]
+      [("scope", value.string(scope)), ("key", value.string(key))]
         + opt_str("valueJson", value_json)
         + [("deleted", value.bool(deleted))]),
   AudioLeader { is_you } =>
@@ -474,14 +474,14 @@ local fn sync_decode(kind: String, v: Value) -> Result[Command, String] = match 
 
 fn response_encode(r: CommandResponse) -> Value = match r {
   Pong { id } =>
-    value.object([("type", value.str("pong"))] + opt_str("id", id)),
+    value.object([("type", value.string("pong"))] + opt_str("id", id)),
   Ack { for_cmd, accepted, error } =>
     value.object(
-      [("type", value.str("ack")), ("for", value.str(for_cmd)), ("accepted", value.bool(accepted))]
+      [("type", value.string("ack")), ("for", value.string(for_cmd)), ("accepted", value.bool(accepted))]
         + opt_str("error", error)),
   StateSnapshot { expressions, bones } =>
     value.object([
-      ("type", value.str("state")),
+      ("type", value.string("state")),
       ("expressions", string_list_to_value(expressions)),
       ("bones", string_list_to_value(bones)),
     ]),
